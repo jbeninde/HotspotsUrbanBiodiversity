@@ -1,0 +1,34 @@
+
+# thinned maxent models
+
+#install.packages("dismo")
+library("dismo")
+
+env_LA = "paste path to your raster stack here"
+
+iNat_LA = "paste path to your occurrence data here" # for example the downloaded iNat dataset
+
+iNat_LA_species = unique(iNat_LA$species)
+
+replicates = 10
+
+for (i in 1:length(iNat_LA_species))
+{
+  
+  occ_temp = iNat_LA[iNat_LA$species == iNat_LA_species[i], c("longitude", "latitude")]
+  coordinates(occ_temp) = ~longitude+latitude
+  proj4string(occ_temp) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0") # make sure the occurrence data has the same projection as the raster stack (e.g., use spTransform to change)
+
+  model <- maxent(x=env_LA, p=occ_temp, nbg=10000, removeDuplicates=TRUE, args=c(paste0("replicates=", replicates))) #remove duplicates is one observation per raster cell, number of background points 
+
+  saveRDS(model, file = paste0("paste path to your preferred location here, end file with .rda file extension"))
+  enm_LA_stack_temp = predict(model, env)
+
+  writeRaster(enm_LA_stack_temp, paste0("paste path to your preferred location here, add species names, etc., to file name if you wish", iNat_LA_species[i], "_", "end file with .grd file extension"), format="raster", overwrite=TRUE) #creates the stack of 10 models of habitat suitability
+  enm_LA_mean = mean(enm_LA_stack_temp) #mean of the stack of models
+
+  writeRaster(enm_LA_mean, paste0("paste path to your preferred location here, add species names, etc., to file name if you wish", iNat_LA_species[i], "_", "end file with .asc file extension"), overwrite=TRUE)
+
+}
+  
+  
